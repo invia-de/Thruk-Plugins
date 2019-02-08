@@ -1,0 +1,22 @@
+##########################################################
+
+=head2 add_routes
+
+page: /thruk/cgi-bin/pnpmaptest.cgi
+
+=cut
+
+$routes->{'/thruk/cgi-bin/pnpmaptest.cgi'} = 'Thruk::Controller::pnpmaptest::index';
+
+#Thruk::Utils::Menu::insert_sub_item('Current Status', 'Service Groups', {
+#                                'href'  => $app->config->{'Thruk::Plugin::PNPmaptest'}->{'default_link'} || $app->config->{'pnpmaptest_default_link'} || '/thruk/cgi-bin/pnpmaptest.cgi',
+#                                'name'  => 'PNP Map (Dev)',
+#});
+
+Thruk::Utils::Status::add_view({'group' => 'PNP Map',
+                                'name'  => 'PNP Map (Dev)',
+                                'value' => 'pnpmaptest',
+                                'url'   => 'pnpmaptest.cgi',
+});
+
+$app->config->{'has_feature_pnpmaptest'} = 1;

@@ -1,0 +1,22 @@
+##########################################################
+
+=head2 add_routes
+
+page: /thruk/cgi-bin/pnpmap.cgi
+
+=cut
+
+$routes->{'/thruk/cgi-bin/pnpmap.cgi'} = 'Thruk::Controller::pnpmap::index';
+
+#Thruk::Utils::Menu::insert_sub_item('Current Status', 'Service Groups', {
+#                                'href'  => $app->config->{'Thruk::Plugin::PNPmap'}->{'default_link'} || $app->config->{'pnpmap_default_link'} || '/thruk/cgi-bin/pnpmap.cgi',
+#                                'name'  => 'PNP Map',
+#});
+
+Thruk::Utils::Status::add_view({'group' => 'PNP Map',
+                                'name'  => 'PNP Map',
+                                'value' => 'pnpmap',
+                                'url'   => 'pnpmap.cgi',
+});
+
+$app->config->{'has_feature_pnpmap'} = 1;

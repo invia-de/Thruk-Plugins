@@ -1,0 +1,209 @@
+[% USE date %]
+[% PROCESS _header.tt %]
+[% PROCESS _message.tt %]
+
+    <script src="/js/jquery.min.js"></script>
+    <table border="0" width="100%" cellspacing="0" cellpadding="0" id="top_pane"[% IF hidetop == 1 %]style="visibility:hidden; display:none;"[% END %]>
+      <tr>
+        <td align="left" valign="top" width="33%">
+          [% PROCESS _infobox.tt %]
+        </td>
+        <td align="center" valign="top" width="33%">[% PROCESS _host_status_details_box.tt %]</td>
+        <td align="center" valign="top" width="33%">[% PROCESS _service_status_details_box.tt %]</td>
+        <td align="right" valign="bottom">
+          [% PROCESS _help.tt topic = "pnp_map" %]
+        </td>
+      </tr>
+    </table>
+    <br>
+    <table border="0" width="100%" cellpadding=0 cellspacing=0>
+      <tr>
+        <td valign="top" align="left" width="33%" nowrap>
+          [% PROCESS _status_filter.tt %]
+          <br>
+        </td>
+        <td valign="top" align="center" width="33%" nowrap>
+          <div align="center" class='statusTitle'>
+            [% IF custom_title != '' %][% custom_title %]
+            [% ELSIF hostgroup != '' %]PNP Map For Host Group '[% hostgroup %]'
+            [% ELSIF servicegroup %]PNP Map For Service Group '[% servicegroup %]'
+            [% ELSIF host == 'all' %]PNP Map For All Host
+            [% ELSIF host != '' %]PNP Map For Host '[% host %]'
+            [% ELSE %]
+            PNP Map
+            [% END %]
+          </div>
+          <br>
+        </td>
+        <td valign="bottom" align="right" width="33%">
+          [% PROCESS _add_bookmark.tt %]
+          [% PROCESS _show_link.tt %]
+        </td>
+      </tr>
+    </table>
+
+    <div align="center">[% PROCESS _pager.tt %]</div>
+
+    <div id="blocks">&nbsp;</div>
+<br style="clear:left">
+
+<script type="text/javascript">
+var data = [];
+var images = [];
+// http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values
+function getParameterByName(name)
+{
+	name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+	var regexS = "[\\?&]" + name + "=([^&#]*)";
+	var regex = new RegExp(regexS);
+	var results = regex.exec(window.location.search);
+	if(results == null)
+		return "";
+	else
+		return decodeURIComponent(results[1].replace(/\+/g, " "));
+}
+
+// http://stackoverflow.com/questions/5999118/add-or-update-query-string-parameter
+function UpdateQueryString(key, value, url) {
+    if (!url) url = window.location.href;
+    var re = new RegExp("([?&])" + key + "=.*?(&|#|$)", "gi");
+
+    if (url.match(re)) {
+        if (value)
+            return url.replace(re, '$1' + key + "=" + value + '$2');
+        else
+            return url.replace(re, '$2');
+    }
+    else {
+        if (value) {
+            var separator = url.indexOf('?') !== -1 ? '&' : '?',
+                hash = url.split('#');
+            url = hash[0] + separator + key + '=' + value;
+            if (hash[1]) url += '#' + hash[1];
+            return url;
+        }
+        else
+            return url;
+    }
+}
+
+function getView(defaultview)
+{
+	if(typeof defaultview == 'undefined')
+		defaultview = 1;
+
+	view = getParameterByName("view");
+	if( view == "" || isNaN(Number(view)) || Number(view) > 4 || Number(view) < 0  )
+		view = defaultview;
+	return view;
+}
+
+function addDropdown()
+{
+	view = getView();
+
+	var views = [
+		["0", "4 Stunden"],
+		["1", "24 Stunden"],
+		["2", "1 Woche"],
+		["3", "1 Monat"],
+		["4", "1 Jahr"]
+	];
+
+	dropdown = "<form name='fzoom'>";
+	dropdown += "<select name='view' onchange='javascript:setView(this.value)'>";
+	for (i=0; i<views.length; i++)
+	{
+		if( view == i )
+			dropdown += "<option value='" + views[i][0] + "' selected>" + views[i][1] + "</option>";
+		else
+			dropdown += "<option value='" + views[i][0] + "'>" + views[i][1] + "</option>";
+	}
+	dropdown += "</select></form><br>";
+	document.getElementById("blocks").innerHTML += dropdown;
+}
+
+function setView(value)
+{
+	window.location.href = UpdateQueryString("view", value);
+}
+
+function block(linkuri, criticity, hostname, servicename, servicenameuri, view, source) {
+	console.log("block");
+	part1 = '<div style="display: inline-block;"><a href="'+ linkuri + '"><b class="service' + criticity + '">' + hostname + ' - ' + servicename + '</b><br>'+'<img src="';
+        part2 = '/pnp4nagios/image?host=' + hostname + '&srv=' + servicenameuri + '&view=' + view + '&source=' + source;
+        part3 = '"></a>&nbsp;</div>';
+	images.push([part1, part2, part3]);
+}
+
+function putblocks(linkuri, criticity, hostname, servicename, servicenameuri, view, source, previmg) {
+	console.log('putblocks');
+	if( view === undefined )
+		view = getView();
+
+//	console.log(hostname+":"+servicename+":"+view+":"+source);
+	if( previmg !== undefined && previmg.width <= 1 ) {
+//		console.log(previmg.src);
+		return
+	}
+
+	if( previmg !== undefined && previmg.width > 1 )
+		block(linkuri, criticity, hostname, servicename, servicenameuri, view, source - 1);
+
+	try {
+		var nextimg = new Image();
+		nextimg.src = '/pnp4nagios/image?host=' + hostname + '&srv=' + servicenameuri + '&view=' + view + '&source=' + source;
+		nextimg.onload=function() { putblocks(linkuri, criticity, hostname, servicename, servicenameuri, view, source + 1, nextimg); };
+	} catch(err) {
+		// 404 error -> Ende
+	}
+}
+
+var getData = function() {
+	console.log('getData');
+	for( var i = 0; i < data.length; i++) {
+ 	       putblocks(data[i][0], data[i][1], data[i][2], data[i][3], data[i][4], data[i][5], data[i][6]);
+	}
+}
+
+var handleOutput = function () {
+	console.log('handleOutput');
+	images.sort(function (x,y) {
+		return x[1] > y[1];
+	});
+
+
+	for( var i = 0; i < images.length; i++) {
+		$('#blocks').append(images[i][0] + images[i][1] + images[i][2]);
+	}
+		
+}
+
+addDropdown();
+
+[% FOREACH hstname = matrix.keys.sort %]
+  [% FOREACH svcname = matrix.$hstname.keys.sort %]
+    [% IF matrix.$hstname.$svcname.perf_data != '' %]
+      [% IF matrix.$hstname.$svcname.state == 0 %][% SET st='OK' %]
+      [% ELSIF matrix.$hstname.$svcname.state == 1 %][% SET st='WARNING' %]
+      [% ELSIF matrix.$hstname.$svcname.state == 2 %][% SET st='CRITICAL' %]
+      [% ELSIF matrix.$hstname.$svcname.state == 3 %][% SET st='UNKNOWN' %]
+      [% ELSE %][% SET st='' %]
+      [% END %]
+//putblocks("[% matrix.$hstname.$svcname.notes_url_expanded %]", "[% st %]", "[% hstname %]", "[% svcname %]", "[% svcname | uri %]", undefined, 0);
+data.push(["[% matrix.$hstname.$svcname.notes_url_expanded %]", "[% st %]", "[% hstname %]", "[% svcname %]", "[% svcname | uri %]", undefined, 0]);
+
+    [% END %]
+  [% END %]
+[% END %]
+
+	getData(); 
+	setTimeout(function() {handleOutput()}, 10000);	
+</script>
+
+<div align="center">[% PROCESS _pager.tt %]</div>
+<br>
+<div class='itemTotalsTitle'>[% IF !has_error && data.size %][% data.size %] of [% pager.total_entries %][% ELSE %]0[% END %] Matching Host Entries Displayed</div>
+
+[% PROCESS _footer.tt %]
+<!-- vim: set ft=html: -->
